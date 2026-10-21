@@ -94,7 +94,7 @@
     if (C.mapUrl) { a.href = C.mapUrl; a.target = '_blank'; a.rel = 'noopener'; }
     $('where').appendChild(a);
   } else {
-    $('where').textContent = 'At ' + C.hosts + '’s place. The address is on your invite.';
+    $('where').textContent = 'At ' + C.place + '. The address is on your invite.';
   }
   if (!C.apiUrl) $('previewNote').hidden = false;
 

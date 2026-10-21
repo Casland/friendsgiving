@@ -5,7 +5,8 @@ window.FG = {
 
   title: 'Friendsgiving',
   year: 2026,
-  hosts: 'Austin & [wife]',                       // PLACEHOLDER
+  hosts: 'Lauren & Austin McCasland',
+  place: 'the McCaslands’',
   dateLabel: 'Saturday, November 21',             // PLACEHOLDER
   timeLabel: '4 pm until the pie runs out',       // PLACEHOLDER
   start: '2026-11-21T16:00:00',                   // local time, used for "Add to calendar"
