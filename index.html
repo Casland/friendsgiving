@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Friendsgiving 2026</title>
+  <meta name="description" content="RSVP and tell us what you're bringing.">
+  <meta name="theme-color" content="#9e1f3a">
+  <meta property="og:title" content="Friendsgiving 2026">
+  <meta property="og:description" content="RSVP and tell us what you're bringing.">
+  <meta property="og:image" content="assets/turkey.webp">
+  <link rel="icon" href="assets/pie.webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Shrikhand&family=Young+Serif&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body>
+  <p class="preview-note" id="previewNote" hidden>Preview mode: entries are saved in this browser only, not the sheet.</p>
+
+  <header class="hero">
+    <img class="hero-turkey" src="assets/turkey.webp" alt="A cartoon turkey in a scarf holding a pie" width="480" height="520">
+    <h1 class="wordmark"><span id="title">Friendsgiving</span> <span class="year" id="year">2026</span></h1>
+    <p class="when"><span id="dateLabel"></span><br><span id="timeLabel"></span></p>
+    <p class="where" id="where"></p>
+    <p class="blurb" id="blurb"></p>
+    <nav class="hero-actions">
+      <a class="btn" href="#rsvp">RSVP</a>
+      <a class="btn btn-quiet" href="#table">Bring a dish</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="paper" id="rsvp" aria-labelledby="rsvpHeading">
+      <h2 id="rsvpHeading">Can you make it?</h2>
+
+      <div class="rsvp-done" id="rsvpDone" hidden>
+        <p class="rsvp-done-line" id="rsvpDoneLine"></p>
+        <button type="button" class="link-btn" id="rsvpEdit">Change your RSVP</button>
+      </div>
+
+      <form id="rsvpForm" novalidate>
+        <label class="field">
+          <span>Your name</span>
+          <input name="name" autocomplete="name" maxlength="60" required>
+        </label>
+
+        <fieldset class="choices">
+          <legend>Are you coming?</legend>
+          <label><input type="radio" name="status" value="yes" required><span>I’ll be there</span></label>
+          <label><input type="radio" name="status" value="maybe"><span>Maybe</span></label>
+          <label><input type="radio" name="status" value="no"><span>Can’t make it</span></label>
+        </fieldset>
+
+        <div class="field count-field" id="countField">
+          <span id="countLabel">How many of you, counting yourself?</span>
+          <div class="stepper">
+            <button type="button" data-step="-1" aria-label="One fewer">−</button>
+            <output name="countOut" id="countOut" aria-labelledby="countLabel">1</output>
+            <button type="button" data-step="1" aria-label="One more">+</button>
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Allergies, plus-ones, anything we should know <em>(optional)</em></span>
+          <textarea name="note" rows="2" maxlength="300"></textarea>
+        </label>
+
+        <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p class="form-msg" role="status" id="rsvpMsg"></p>
+        <button class="btn" type="submit">Send RSVP</button>
+      </form>
+    </section>
+
+    <section class="table" id="table" aria-labelledby="tableHeading">
+      <div class="table-inner">
+        <h2 id="tableHeading">What’s on the table</h2>
+        <p class="table-sum" id="tableSum">Loading the table…</p>
+        <div id="courses"></div>
+
+        <form class="paper bring" id="dishForm" novalidate>
+          <h3>Bring something</h3>
+          <label class="field">
+            <span>Your name</span>
+            <input name="name" autocomplete="name" maxlength="60" required>
+          </label>
+          <label class="field">
+            <span>What are you bringing?</span>
+            <input name="dish" maxlength="80" placeholder="Mom’s mac and cheese" required>
+          </label>
+          <div class="field-row">
+            <label class="field">
+              <span>Kind of dish</span>
+              <select name="course" id="courseSelect"></select>
+            </label>
+            <label class="field">
+              <span>Feeds about <em>(optional)</em></span>
+              <input name="serves" inputmode="numeric" maxlength="20" placeholder="8">
+            </label>
+          </div>
+          <fieldset class="tags">
+            <legend>It’s… <em>(optional)</em></legend>
+            <label><input type="checkbox" name="tags" value="vegetarian"><span>vegetarian</span></label>
+            <label><input type="checkbox" name="tags" value="vegan"><span>vegan</span></label>
+            <label><input type="checkbox" name="tags" value="gluten-free"><span>gluten-free</span></label>
+            <label><input type="checkbox" name="tags" value="dairy-free"><span>dairy-free</span></label>
+            <label><input type="checkbox" name="tags" value="has nuts"><span>has nuts</span></label>
+          </fieldset>
+          <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <p class="form-msg" role="status" id="dishMsg"></p>
+          <button class="btn" type="submit">Put it on the table</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="guests" id="guests" aria-labelledby="guestsHeading">
+      <h2 id="guestsHeading">Who’s coming</h2>
+      <p class="guest-sum" id="guestSum"></p>
+      <ul class="guest-list" id="guestList"></ul>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <img src="assets/pumpkins.webp" alt="" width="520" height="384">
+    <p><button type="button" class="link-btn" id="calBtn">Add it to your calendar</button></p>
+    <p class="hosts" id="hosts"></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
