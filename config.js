@@ -7,8 +7,8 @@ window.FG = {
   year: 2026,
   hosts: 'Lauren & Austin McCasland',
   place: 'the McCaslands’',
-  dateLabel: 'Saturday, November 21',             // PLACEHOLDER
-  timeLabel: '4 pm until the pie runs out',       // PLACEHOLDER
+  dateLabel: 'Saturday, November 21',
+  timeLabel: 'From 4 till the pie ends',
   start: '2026-11-21T16:00:00',                   // local time, used for "Add to calendar"
   end: '2026-11-21T21:00:00',
   // The site is public, so the address is optional. Leave it '' to show "the address is on your invite".
