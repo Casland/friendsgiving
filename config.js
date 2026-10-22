@@ -1,7 +1,7 @@
 // Everything about the party lives here. Edit this file, commit, push: the page updates.
 window.FG = {
   // Paste the Apps Script web app URL here (backend/SETUP.md). Empty = preview mode, saved only in your browser.
-  apiUrl: '',
+  apiUrl: 'https://script.google.com/macros/s/AKfycbxOuWVNBZzBIZnPdDKSOZSV7ivDeCqxLs6d62gkNl2RgOZc-epQ1-9frZ3-tUaDko1a/exec',
 
   title: 'Friendsgiving',
   year: 2026,
