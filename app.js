@@ -46,8 +46,40 @@
     return {
       list: function () { return fetch(url + '?action=list').then(handle); },
       // text/plain keeps this a "simple" request, so Apps Script doesn't need to answer a CORS preflight
-      post: function (body) { return fetch(url, { method: 'POST', body: JSON.stringify(body) }).then(handle); }
+      post: function (body) { return fetch(url, { method: 'POST', body: JSON.stringify(body) }).then(handle); },
+      art: function (id) { return fetch(url + '?action=art&id=' + encodeURIComponent(id)).then(handle); }
     };
+  }
+
+  // ---------- drawn-to-order dish pictures (backend draws them with fal.ai; stock pictures until they arrive) ----------
+  var artSrc = {}, artAsked = {}, artQueue = [], artBusy = false;
+  function cachedArt(id) {
+    if (!artSrc[id]) { try { artSrc[id] = localStorage.getItem('fg2026-art-' + id) || ''; } catch (e) { artSrc[id] = ''; } }
+    return artSrc[id];
+  }
+  function wantArt() {
+    if (!api.art) return;
+    state.dishes.forEach(function (d) {
+      if (cachedArt(d.id) || artAsked[d.id]) return;
+      artAsked[d.id] = true; artQueue.push(d);
+    });
+    nextArt();
+  }
+  function nextArt() {
+    if (artBusy || !artQueue.length) return;
+    var d = artQueue.shift(); artBusy = true;
+    (d.art ? Promise.resolve({ art: true }) : api.post({ action: 'art', id: d.id }).catch(function () { return {}; }))
+      .then(function (r) { return r.art ? api.art(d.id) : null; })
+      .then(function (a) {
+        if (!a) return;
+        var src = 'data:' + a.type + ';base64,' + a.data;
+        artSrc[d.id] = src;
+        try { localStorage.setItem('fg2026-art-' + d.id, src); } catch (e) { /* full: keep it for this visit only */ }
+        var img = document.querySelector('.plate[data-id="' + d.id + '"] img.dish');
+        if (img) { img.src = src; img.classList.add('drawn'); }
+      })
+      .catch(function () { /* stock picture stays */ })
+      .then(function () { artBusy = false; nextArt(); });
   }
 
   function previewApi() {
@@ -242,7 +274,10 @@
   function plate(d, c) {
     var li = el('li', 'plate' + (d.id === justAdded ? ' is-new' : ''));
     li.dataset.id = d.id;
-    li.appendChild(setting(picture(d.dish, c.key)));
+    var drawn = cachedArt(d.id);
+    var s = setting(drawn || picture(d.dish, c.key));
+    if (drawn) s.firstChild.classList.add('drawn');
+    li.appendChild(s);
     var card = el('span', 'place-card');
     card.appendChild(el('span', 'plate-name', d.dish));
     card.appendChild(el('span', 'plate-who', 'from ' + d.name));
@@ -355,7 +390,7 @@
   }
 
   function refresh() {
-    return api.list().then(function (d) { state = d; render(); }).catch(function (e) {
+    return api.list().then(function (d) { state = d; render(); wantArt(); }).catch(function (e) {
       $('tableSum').textContent = e.message;
     });
   }
@@ -457,7 +492,7 @@
     var btn = form.querySelector('button[type=submit]'), label = btn.textContent;
     btn.disabled = true; btn.textContent = 'Saving…'; say(msg, '');
     api.post(body).then(function (res) {
-      state = res; done();
+      state = res; done(); wantArt();
     }).catch(function (e) {
       if (failed) failed();
       say(msg, e.message || 'That didn’t save. Check your connection and try again.', true);

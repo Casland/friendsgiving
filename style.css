@@ -302,6 +302,7 @@ form > .btn { justify-self: start; }
   transform: translateX(-50%);
 }
 .setting .dish.ghost { opacity: 0.55; }
+.setting .dish.drawn { mix-blend-mode: multiply; }   /* drawn pictures come on white: let the plate and cloth show through */
 
 /* her place cards: a little tented card in front of each plate */
 .place-card {
