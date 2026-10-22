@@ -2,22 +2,28 @@
   'use strict';
   var C = window.FG;
   var COURSES = [
-    { key: 'appetizer', label: 'Starters', one: 'a starter', img: 'pumpkins' },
-    { key: 'main', label: 'Mains', one: 'a main', img: 'gravy' },
-    { key: 'side', label: 'Sides', one: 'a side', img: 'casserole' },
-    { key: 'dessert', label: 'Desserts', one: 'a dessert', img: 'pie' },
-    { key: 'drinks', label: 'Drinks', one: 'drinks', img: 'cider' },
-    { key: 'other', label: 'Wild cards', one: 'anything', img: 'leaves' }
+    { key: 'appetizer', label: 'Starters', option: 'Starter', one: 'a starter', eg: 'Deviled eggs' },
+    { key: 'main', label: 'Mains', option: 'Main', one: 'a main', eg: 'Honey baked ham' },
+    { key: 'side', label: 'Sides', option: 'Side', one: 'a side', eg: 'Mom’s mac and cheese' },
+    { key: 'dessert', label: 'Desserts', option: 'Dessert', one: 'a dessert', eg: 'Pecan pie' },
+    { key: 'drinks', label: 'Drinks', option: 'Drinks', one: 'drinks', eg: 'Mulled cider' },
+    { key: 'other', label: 'Something else', option: 'Something else', one: 'something', eg: 'A bag of ice' }
   ];
+  var OPEN_PLATES = 3;   // each course starts with this many empty plates, and always keeps at least one
   var STATUS_LINE = {
     yes: function (n) { return 'See you there, ' + n + '!'; },
     maybe: function (n) { return 'Got it, ' + n + '. We’ll save you a maybe-chair.'; },
     no: function (n) { return 'We’ll miss you, ' + n + '.'; }
   };
   var $ = function (id) { return document.getElementById(id); };
+  var reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  var scrollMode = function () { return reduceMotion.matches ? 'auto' : 'smooth'; };
+
+  // ?preview forces the browser-only preview, so testing never writes to the real sheet.
+  var PREVIEW = !C.apiUrl || new URLSearchParams(location.search).has('preview');
 
   // ---------- who am I (kept in this browser) ----------
-  var ME_KEY = 'fg2026-me';
+  var ME_KEY = PREVIEW ? 'fg2026-me-preview' : 'fg2026-me';
   var me = load(ME_KEY) || {};
   if (!me.guestId) { me.guestId = 'g' + rand(); save(ME_KEY, me); }
   me.dishes = me.dishes || {};
@@ -30,7 +36,7 @@
   function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: fine */ } }
 
   // ---------- data: Apps Script, or a browser-only preview ----------
-  var api = C.apiUrl ? remoteApi(C.apiUrl) : previewApi();
+  var api = PREVIEW ? previewApi() : remoteApi(C.apiUrl);
 
   function remoteApi(url) {
     function handle(r) {
@@ -45,31 +51,32 @@
   }
 
   function previewApi() {
-    var KEY = 'fg2026-preview';
+    var KEY = 'fg2026-preview-v2';
     var db = load(KEY) || {
       rsvps: [
-        { guestId: 'demo1', name: 'Priya', status: 'yes', count: 2 },
-        { guestId: 'demo2', name: 'Marcus', status: 'yes', count: 1 },
-        { guestId: 'demo3', name: 'Jen', status: 'maybe', count: 1 }
+        { guestId: 'demo1', name: 'Priya', status: 'yes', count: 3, adults: 2, kids: 1 },
+        { guestId: 'demo2', name: 'Marcus', status: 'yes', count: 1 },   // old-style row: count only
+        { guestId: 'demo3', name: 'Jen', status: 'maybe', count: 1, adults: 1, kids: 0 }
       ],
       dishes: [
-        { id: 'ddemo1', guestId: 'demo1', name: 'Priya', dish: 'Sweet potato casserole', course: 'side', serves: '10', tags: ['vegetarian'] },
-        { id: 'ddemo2', guestId: 'demo2', name: 'Marcus', dish: 'Bourbon pecan pie', course: 'dessert', serves: '8', tags: ['has nuts'] },
-        { id: 'ddemo3', guestId: 'demo3', name: 'Jen', dish: 'Cranberry spritzers', course: 'drinks', serves: '', tags: ['vegan'] }
+        { id: 'ddemo1', guestId: 'demo1', name: 'Priya', dish: 'Sweet potato casserole', course: 'side' },
+        { id: 'ddemo2', guestId: 'demo2', name: 'Marcus', dish: 'Bourbon pecan pie', course: 'dessert' },
+        { id: 'ddemo3', guestId: 'demo3', name: 'Jen', dish: 'Cranberry spritzers', course: 'drinks' }
       ],
       tokens: {}
     };
-    function out() { save(KEY, db); return Promise.resolve({ ok: true, rsvps: db.rsvps, dishes: db.dishes }); }
+    function out() { save(KEY, db); return Promise.resolve(JSON.parse(JSON.stringify({ ok: true, rsvps: db.rsvps, dishes: db.dishes }))); }
     function fail(msg) { return Promise.reject(new Error(msg)); }
     return {
       list: out,
       post: function (b) {
+        if (b.website) return out();
         if (b.action === 'rsvp') {
-          var r = { guestId: b.guestId, name: b.name, status: b.status, count: b.count };
+          var r = { guestId: b.guestId, name: b.name, status: b.status, count: b.count, adults: b.adults, kids: b.kids };
           var i = db.rsvps.findIndex(function (x) { return x.guestId === b.guestId; });
           if (i >= 0) db.rsvps[i] = r; else db.rsvps.push(r);
         } else if (b.action === 'dish') {
-          db.dishes.push({ id: b.id, guestId: b.guestId, name: b.name, dish: b.dish, course: b.course, serves: b.serves, tags: b.tags });
+          db.dishes.push({ id: b.id, guestId: b.guestId, name: b.name, dish: b.dish, course: b.course });
           db.tokens[b.id] = b.token;
         } else if (b.action === 'removeDish') {
           if (db.tokens[b.id] !== b.token) return fail('Only the person who added this dish can remove it.');
@@ -80,34 +87,59 @@
     };
   }
 
+  // ---------- dish pictures: keyword library in assets/dishes/map.json ----------
+  var PICS = { base: 'assets/dishes/', keys: [], keywords: {}, fallback: {} };
+  function norm(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/&/g, ' and ').replace(/['’‘`]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function picture(dish, course) {
+    var hay = ' ' + norm(dish) + ' ';
+    for (var i = 0; i < PICS.keys.length; i++) {
+      if (hay.indexOf(' ' + PICS.keys[i] + ' ') >= 0) return PICS.base + PICS.keywords[PICS.keys[i]];
+    }
+    return PICS.base + (PICS.fallback[course] || 'mystery-' + (course || 'other') + '.webp');
+  }
+  var picsReady = fetch('assets/dishes/map.json?v=4').then(function (r) { return r.json(); }).then(function (m) {
+    PICS.base = m.base || PICS.base;
+    PICS.keywords = m.keywords || {};
+    PICS.fallback = m.fallback || {};
+    PICS.keys = Object.keys(PICS.keywords).sort(function (a, b) { return b.length - a.length; });
+  }).catch(function () { /* fall back to the per-course mystery dish */ });
+
   // ---------- static details ----------
-  $('title').textContent = C.title;
-  $('year').textContent = C.year;
   $('dateLabel').textContent = C.dateLabel;
   $('timeLabel').textContent = C.timeLabel;
+  $('where').textContent = 'At ' + C.place;
   $('blurb').textContent = C.blurb;
   $('hosts').textContent = 'Hosted by ' + C.hosts;
-  document.title = C.title + ' ' + C.year;
-  if (C.address) {
-    var a = document.createElement(C.mapUrl ? 'a' : 'span');
-    a.textContent = C.address;
-    if (C.mapUrl) { a.href = C.mapUrl; a.target = '_blank'; a.rel = 'noopener'; }
-    $('where').appendChild(a);
-  } else {
-    $('where').textContent = 'At ' + C.place + '. The address is on your invite.';
-  }
-  if (!C.apiUrl) $('previewNote').hidden = false;
+  if (PREVIEW) $('previewNote').hidden = false;
 
   var sel = $('courseSelect');
   COURSES.forEach(function (c) {
-    var o = document.createElement('option'); o.value = c.key; o.textContent = c.label.replace(/s$/, '').replace('Wild card', 'Something else');
+    var o = document.createElement('option'); o.value = c.key; o.textContent = c.option;
     sel.appendChild(o);
   });
-  sel.value = 'side';
+  function course(key) { return COURSES.find(function (c) { return c.key === key; }) || COURSES[COURSES.length - 1]; }
+
+  // ---------- the turkey: hops a few times on load, tap for another ----------
+  var turkeyBtn = $('turkeyBtn'), turkey = turkeyBtn.querySelector('.turkey');
+  function syncTurkey() { turkeyBtn.disabled = reduceMotion.matches; }
+  syncTurkey();
+  if (reduceMotion.addEventListener) reduceMotion.addEventListener('change', syncTurkey);
+  turkeyBtn.addEventListener('click', function () {
+    turkey.classList.add('tk-off');
+    void turkey.offsetWidth;          // restart the CSS animations from the top
+    turkey.classList.remove('tk-off');
+    turkey.classList.add('tk-once');
+  });
 
   // ---------- state + rendering ----------
   var state = { rsvps: [], dishes: [] };
-  var justAdded = null;
+  var extra = {};          // open plates added on this screen by tapping the last one, per course
+  var picked = null;       // { course, index } of the open plate whose form is showing
+  var grown = null;        // { course, index } of a plate that just appeared (for the pop-in)
+  var justAdded = null;    // id of the dish that just landed
 
   function render() {
     renderRsvp();
@@ -115,94 +147,203 @@
     renderGuests();
   }
 
+  function party(r) {
+    var a = Number(r.adults), k = Number(r.kids);
+    if (!(a + k > 0)) { a = r.status === 'no' ? 0 : (Number(r.count) || 1); k = 0; }  // older backend: count only
+    return { adults: a || 0, kids: k || 0 };
+  }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function partyText(p) {
+    if (!p.kids) return plural(p.adults, 'adult', 'adults');
+    if (!p.adults) return plural(p.kids, 'kid', 'kids');
+    return plural(p.adults, 'adult', 'adults') + ' and ' + plural(p.kids, 'kid', 'kids');
+  }
+  function joinAnd(list) {
+    return list.length < 2 ? list.join('') : list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
+  }
+
   function renderRsvp() {
     var mine = state.rsvps.find(function (r) { return r.guestId === me.guestId; });
     var form = $('rsvpForm');
     if (mine && !form.dataset.editing) {
       $('rsvpDone').hidden = false; form.hidden = true;
-      $('rsvpDoneLine').textContent = STATUS_LINE[mine.status](mine.name) +
-        (mine.status !== 'no' && mine.count > 1 ? ' (party of ' + mine.count + ')' : '');
+      $('rsvpDoneLine').textContent = (STATUS_LINE[mine.status] || STATUS_LINE.yes)(mine.name);
+      var p = party(mine);
+      $('rsvpParty').textContent = mine.status !== 'no' && p.adults + p.kids > 1 ? partyText(p) + '.' : '';
+      $('rsvpParty').hidden = !$('rsvpParty').textContent;
+      // the one next step after an RSVP: pick a dish (or a thank-you if they already have)
+      var myDishes = state.dishes.filter(function (d) { return me.dishes[d.id]; }).map(function (d) { return d.dish; });
+      var nudge = $('rsvpNudge');
+      nudge.hidden = mine.status === 'no';
+      if (myDishes.length) {
+        $('nudgeText').textContent = 'You’re bringing ' + joinAnd(myDishes) + '. Thank you!';
+        $('nudgeLink').hidden = true;
+      } else {
+        $('nudgeText').textContent = 'What are you bringing? Pick an empty plate on the table.';
+        $('nudgeLink').hidden = false;
+      }
     } else {
       $('rsvpDone').hidden = true; form.hidden = false;
     }
   }
 
+  // ---------- the table ----------
+  var dishForm = $('dishForm');
+  var tableInner = dishForm.parentNode;
+
   function renderTable() {
+    // keep the dish form (and what's being typed) when the table re-renders under it
+    var active = document.activeElement, keep = dishForm.contains(active) ? active : null;
+    var selStart = keep && keep.selectionStart, selEnd = keep && keep.selectionEnd;
+
     var hostPlates = (C.hostDishes || []).map(function (d, i) {
-      return { id: 'host' + i, name: 'the hosts', dish: d.dish, course: d.course, tags: d.tags || [], host: true };
+      return { id: 'host' + i, name: 'the hosts', dish: d.dish, course: d.course, host: true };
     });
     var all = hostPlates.concat(state.dishes);
     var wrap = $('courses'); wrap.textContent = '';
-    var openTotal = 0;
 
     COURSES.forEach(function (c) {
-      var here = all.filter(function (d) { return (d.course || 'other') === c.key; });
-      var guestCount = here.filter(function (d) { return !d.host; }).length;
-      var open = Math.max(0, ((C.wants || {})[c.key] || 0) - guestCount);
-      openTotal += open;
-      if (!here.length && !open) return;
+      var here = all.filter(function (d) { return course(d.course).key === c.key; });
+      var filled = here.filter(function (d) { return !d.host; }).length;
+      var open = Math.max(OPEN_PLATES - filled, 1) + (extra[c.key] || 0);
 
       var sec = el('div', 'course');
-      var head = el('h3', 'course-head', c.label);
-      if (here.length) head.appendChild(el('span', '', here.length + (here.length === 1 ? ' dish' : ' dishes')));
-      sec.appendChild(head);
+      sec.appendChild(el('h3', 'course-head', c.label));
       var ul = el('ul', 'plates');
+      ul.setAttribute('aria-label', c.label);
       here.forEach(function (d) { ul.appendChild(plate(d, c)); });
-      for (var i = 0; i < open; i++) ul.appendChild(openPlate(c));
+      for (var i = 0; i < open; i++) ul.appendChild(openPlate(c, i, open));
       sec.appendChild(ul);
+      if (picked && picked.course === c.key) sec.appendChild(dishForm);
       wrap.appendChild(sec);
     });
+    if (!picked) tableInner.appendChild(dishForm);
+    grown = null;
+
+    if (keep && document.contains(keep)) {
+      keep.focus({ preventScroll: true });
+      try { if (selStart != null) keep.setSelectionRange(selStart, selEnd); } catch (e) { /* select box */ }
+    }
 
     var n = state.dishes.length;
-    var have = n ? n + (n === 1 ? ' dish' : ' dishes') + ' from friends so far.' : 'No dishes from friends yet. Be the first!';
-    $('tableSum').textContent = have + (openTotal ? ' ' + openTotal + ' open ' + (openTotal === 1 ? 'plate' : 'plates') + ' still.' : ' The table is full!');
+    $('tableSum').textContent = (n ? plural(n, 'dish', 'dishes') + ' from friends so far.' : 'No dishes from friends yet.') +
+      ' Tap an empty plate to bring one.';
+  }
+
+  function setting(src, ghost) {
+    var s = el('span', 'setting');
+    if (src) {
+      var img = el('img', 'dish' + (ghost ? ' ghost' : '')); img.src = src; img.alt = ''; img.decoding = 'async';
+      s.appendChild(img);
+    }
+    return s;
   }
 
   function plate(d, c) {
     var li = el('li', 'plate' + (d.id === justAdded ? ' is-new' : ''));
-    var dish = el('div', 'plate-dish');
-    var img = el('img'); img.src = 'assets/' + c.img + '.webp'; img.alt = '';
-    dish.appendChild(img); li.appendChild(dish);
-    var label = el('div', 'plate-label');
-    label.appendChild(el('span', 'plate-name', d.dish));
-    label.appendChild(el('span', 'plate-who', 'from ' + d.name + (d.serves ? ', feeds ' + d.serves : '')));
-    if (d.tags && d.tags.length) label.appendChild(el('span', 'plate-tags', d.tags.join(', ')));
-    li.appendChild(label);
+    li.dataset.id = d.id;
+    li.appendChild(setting(picture(d.dish, c.key)));
+    var card = el('span', 'place-card');
+    card.appendChild(el('span', 'plate-name', d.dish));
+    card.appendChild(el('span', 'plate-who', 'from ' + d.name));
+    li.appendChild(card);
     if (me.dishes[d.id]) {
-      var b = el('button', 'link-btn', 'Take it off the table'); b.type = 'button';
+      var b = el('button', 'link-btn take-back', 'Take it back'); b.type = 'button';
+      b.setAttribute('aria-label', 'Take ' + d.dish + ' back off the table');
       b.addEventListener('click', function () { removeDish(d, b); });
       li.appendChild(b);
     }
     return li;
   }
 
-  function openPlate(c) {
-    var li = el('li', 'plate open');
+  function openPlate(c, i, open) {
+    var isPicked = picked && picked.course === c.key && picked.index === i;
+    var isGrown = grown && grown.course === c.key && grown.index === i;
+    var typed = isPicked && dishForm.elements.dish.value.trim();
+    var li = el('li', 'plate open' + (isPicked ? ' is-picked' : '') + (isGrown ? ' is-grown' : '') + (typed ? ' has-ghost' : ''));
     var b = el('button'); b.type = 'button';
-    var dish = el('div', 'plate-dish'); dish.appendChild(el('span', '', '+'));
-    var label = el('div', 'plate-label'); label.appendChild(el('span', 'plate-name', 'Room for ' + c.one));
-    b.appendChild(dish); b.appendChild(label);
-    b.addEventListener('click', function () {
-      sel.value = c.key;
-      $('dishForm').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
-      $('dishForm').elements.dish.focus({ preventScroll: true });
-    });
+    b.dataset.course = c.key; b.dataset.index = i;
+    if (isPicked) b.setAttribute('aria-expanded', 'true');
+    var s = setting(typed ? picture(typed, dishForm.elements.course.value) : null, true);
+    if (!typed) s.appendChild(el('span', 'plus', '+'));
+    b.appendChild(s);
+    var card = el('span', 'place-card'); card.appendChild(el('span', 'plate-name', 'I’ll bring ' + c.one));
+    b.appendChild(card);
+    b.addEventListener('click', function () { pickPlate(c, i, open); });
     li.appendChild(b);
     return li;
   }
 
+  function pickPlate(c, i, open) {
+    if (i === open - 1) {                      // tapped the last open plate: set another one to its right
+      extra[c.key] = (extra[c.key] || 0) + 1;
+      grown = { course: c.key, index: open };
+    }
+    var f = dishForm.elements;
+    var wasOpen = !!picked;
+    picked = { course: c.key, index: i };
+    f.course.value = c.key;
+    f.dish.placeholder = c.eg;
+    $('bringHeading').textContent = 'I’ll bring ' + c.one;
+    say($('dishMsg'), '');
+    if (!f.name.value.trim() && me.name) f.name.value = me.name;
+    dishForm.hidden = false;
+    renderTable();
+    var target = f.name.value.trim() ? f.dish : f.name;
+    target.focus({ preventScroll: true });
+    dishForm.scrollIntoView({ behavior: wasOpen ? 'auto' : scrollMode(), block: 'nearest' });
+  }
+
+  function closeForm(focusPlate) {
+    var was = picked;
+    picked = null;
+    dishForm.hidden = true;
+    renderTable();
+    if (focusPlate && was) {
+      var b = document.querySelector('.plate.open button[data-course="' + was.course + '"][data-index="' + was.index + '"]');
+      if (b) b.focus();
+    }
+  }
+
+  // live picture on the chosen plate as you type
+  dishForm.elements.dish.addEventListener('input', updateGhost);
+  sel.addEventListener('change', updateGhost);
+  function updateGhost() {
+    if (!picked) return;
+    var b = document.querySelector('.plate.open button[data-course="' + picked.course + '"][data-index="' + picked.index + '"]');
+    if (!b) return;
+    var typed = dishForm.elements.dish.value.trim();
+    b.parentNode.classList.toggle('has-ghost', !!typed);
+    var s = b.querySelector('.setting'), img = s.querySelector('img'), plus = s.querySelector('.plus');
+    if (typed) {
+      if (plus) plus.remove();
+      if (!img) { img = el('img', 'dish ghost'); img.alt = ''; s.appendChild(img); }
+      var src = picture(typed, sel.value);
+      if (img.getAttribute('src') !== src) img.src = src;
+    } else {
+      if (img) img.remove();
+      if (!plus) s.appendChild(el('span', 'plus', '+'));
+    }
+  }
+
+  $('bringCancel').addEventListener('click', function () { closeForm(true); });
+  dishForm.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeForm(true); });
+
+  // ---------- who's coming ----------
   function renderGuests() {
     var coming = state.rsvps.filter(function (r) { return r.status === 'yes'; });
     var maybe = state.rsvps.filter(function (r) { return r.status === 'maybe'; });
-    var heads = coming.reduce(function (s, r) { return s + (Number(r.count) || 1); }, 0);
-    $('guestSum').textContent = heads
-      ? heads + (heads === 1 ? ' person is' : ' people are') + ' coming' + (maybe.length ? ', and ' + maybe.length + ' maybe.' : '.')
-      : (maybe.length ? maybe.length + ' maybe so far.' : 'No RSVPs yet.');
+    var tot = coming.reduce(function (s, r) { var p = party(r); s.adults += p.adults; s.kids += p.kids; return s; }, { adults: 0, kids: 0 });
+    var line;
+    if (tot.adults + tot.kids) line = partyText(tot) + ' coming' + (maybe.length ? ', and ' + maybe.length + ' maybe.' : '.');
+    else line = maybe.length ? plural(maybe.length, 'maybe', 'maybes') + ' so far.' : 'No RSVPs yet.';
+    $('guestSum').textContent = line;
     var ul = $('guestList'); ul.textContent = '';
     if (!C.showGuestNames) return;
     coming.concat(maybe).forEach(function (r) {
-      var extra = r.count > 1 ? ' +' + (r.count - 1) : '';
-      ul.appendChild(el('li', r.status === 'maybe' ? 'maybe' : '', r.name + extra));
+      var p = party(r), n = p.adults + p.kids;
+      var li = el('li', r.status === 'maybe' ? 'maybe' : '', r.name + (n > 1 ? ' +' + (n - 1) : ''));
+      ul.appendChild(li);
     });
   }
 
@@ -221,17 +362,19 @@
 
   // ---------- RSVP form ----------
   var rsvpForm = $('rsvpForm');
-  var count = 1;
-  function setCount(n) { count = Math.max(1, Math.min(12, n)); $('countOut').textContent = count; }
+  var people = { adults: 1, kids: 0 };
+  var LIMITS = { adults: [1, 12], kids: [0, 12] };
+  function setPeople(who, n) {
+    people[who] = Math.max(LIMITS[who][0], Math.min(LIMITS[who][1], n));
+    $(who + 'Out').textContent = people[who];
+  }
   rsvpForm.addEventListener('click', function (e) {
-    var s = e.target.getAttribute && e.target.getAttribute('data-step');
-    if (s) setCount(count + Number(s));
+    var t = e.target.closest && e.target.closest('[data-step]');
+    if (t) setPeople(t.dataset.who, people[t.dataset.who] + Number(t.dataset.step));
   });
-  rsvpForm.addEventListener('change', function () {
-    var st = rsvpForm.elements.status.value;
-    $('countField').hidden = st === 'no';
-  });
-  if (me.name) { rsvpForm.elements.name.value = me.name; $('dishForm').elements.name.value = me.name; }
+  function syncParty() { $('partyField').hidden = rsvpForm.elements.status.value === 'no'; }
+  rsvpForm.addEventListener('change', syncParty);
+  if (me.name) { rsvpForm.elements.name.value = me.name; dishForm.elements.name.value = me.name; }
 
   $('rsvpEdit').addEventListener('click', function () {
     var mine = state.rsvps.find(function (r) { return r.guestId === me.guestId; });
@@ -239,8 +382,9 @@
     if (mine) {
       rsvpForm.elements.name.value = mine.name;
       rsvpForm.elements.status.value = mine.status;
-      setCount(mine.count || 1);
-      $('countField').hidden = mine.status === 'no';
+      var p = party(mine);
+      setPeople('adults', p.adults || 1); setPeople('kids', p.kids);
+      syncParty();
     }
     renderRsvp();
     rsvpForm.elements.name.focus();
@@ -253,14 +397,25 @@
     if (!name) return say(msg, 'Add your name so we know who’s coming.', true, f.name);
     if (!status) return say(msg, 'Pick one: I’ll be there, maybe, or can’t make it.', true);
     remember(name);
+    var a = status === 'no' ? 0 : people.adults, k = status === 'no' ? 0 : people.kids;
     submit(rsvpForm, msg, {
       action: 'rsvp', guestId: me.guestId, name: name, status: status,
-      count: status === 'no' ? 0 : count, note: f.note.value.trim(), website: f.website.value
-    }, function () { delete rsvpForm.dataset.editing; say(msg, ''); });
+      adults: a, kids: k, count: a + k, website: f.website.value
+    }, function () {
+      delete rsvpForm.dataset.editing; say(msg, ''); render();
+      $('rsvpHeading').focus({ preventScroll: true });
+    });
+  });
+  $('rsvpHeading').tabIndex = -1;
+
+  $('nudgeLink').addEventListener('click', function (e) {
+    e.preventDefault();
+    $('table').scrollIntoView({ behavior: scrollMode(), block: 'start' });
+    var first = document.querySelector('.plate.open button');
+    if (first) first.focus({ preventScroll: true });
   });
 
   // ---------- dish form ----------
-  var dishForm = $('dishForm');
   dishForm.addEventListener('submit', function (e) {
     e.preventDefault();
     var f = dishForm.elements, msg = $('dishMsg');
@@ -269,16 +424,20 @@
     if (!dish) return say(msg, 'Say what you’re bringing.', true, f.dish);
     remember(name);
     var id = 'd' + rand(), token = 't' + rand();
-    var tags = Array.prototype.filter.call(f.tags, function (t) { return t.checked; }).map(function (t) { return t.value; });
     me.dishes[id] = token; save(ME_KEY, me);
     submit(dishForm, msg, {
       action: 'dish', guestId: me.guestId, id: id, token: token, name: name, dish: dish,
-      course: f.course.value, serves: f.serves.value.trim(), tags: tags, website: f.website.value
+      course: f.course.value, website: f.website.value
     }, function () {
+      f.dish.value = '';
+      picked = null; dishForm.hidden = true;
       justAdded = id; render(); justAdded = null;
-      say(msg, dish + ' is on the table. Thank you!', false);
-      f.dish.value = ''; f.serves.value = '';
-      Array.prototype.forEach.call(f.tags, function (t) { t.checked = false; });
+      say($('tableMsg'), dish + ' is on the table. Thank you!', false);
+      var li = document.querySelector('.plate[data-id="' + id + '"]');
+      if (li) {
+        li.tabIndex = -1; li.focus({ preventScroll: true });
+        li.scrollIntoView({ behavior: scrollMode(), block: 'center' });
+      }
     }, function () { delete me.dishes[id]; save(ME_KEY, me); });
   });
 
@@ -287,10 +446,10 @@
     api.post({ action: 'removeDish', id: d.id, token: me.dishes[d.id] }).then(function (res) {
       delete me.dishes[d.id]; save(ME_KEY, me);
       state = res; render();
-      say($('dishMsg'), d.dish + ' is off the table.', false);
+      say($('tableMsg'), d.dish + ' is off the table.', false);
     }).catch(function (e) {
-      btn.disabled = false; btn.textContent = 'Take it off the table';
-      say($('dishMsg'), e.message, true);
+      btn.disabled = false; btn.textContent = 'Take it back';
+      say($('tableMsg'), e.message, true);
     });
   }
 
@@ -298,7 +457,7 @@
     var btn = form.querySelector('button[type=submit]'), label = btn.textContent;
     btn.disabled = true; btn.textContent = 'Saving…'; say(msg, '');
     api.post(body).then(function (res) {
-      state = res; render(); done();
+      state = res; done();
     }).catch(function (e) {
       if (failed) failed();
       say(msg, e.message || 'That didn’t save. Check your connection and try again.', true);
@@ -306,7 +465,7 @@
   }
 
   function say(msg, text, isErr, focus) {
-    msg.textContent = text; msg.className = 'form-msg' + (text ? (isErr ? ' err' : ' ok') : '');
+    msg.textContent = text; msg.className = msg.className.replace(/\s*\b(err|ok)\b/g, '') + (text ? (isErr ? ' err' : ' ok') : '');
     if (focus) focus.focus();
   }
 
@@ -317,21 +476,22 @@
 
   // ---------- calendar ----------
   $('calBtn').addEventListener('click', function () {
-    var stamp = function (s) { return s.replace(/[-:]/g, '').slice(0, 15); };
+    var stamp = function (s) { return s.replace(/[-:]/g, '').slice(0, 15); };   // floating local time
+    var year = C.start.slice(0, 4);
     var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//friendsgiving//EN', 'BEGIN:VEVENT',
-      'UID:friendsgiving-' + C.year + '@casland.github.io',
+      'UID:friendsgiving-' + year + '@casland.github.io',
       'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
       'DTSTART:' + stamp(C.start), 'DTEND:' + stamp(C.end),
-      'SUMMARY:' + C.title + ' ' + C.year,
-      'LOCATION:' + (C.address || 'See your invite'),
-      'DESCRIPTION:RSVP and dishes: ' + location.href.split('#')[0],
+      'SUMMARY:' + C.title + ' at ' + C.place,
+      'LOCATION:' + C.place.charAt(0).toUpperCase() + C.place.slice(1),
+      'DESCRIPTION:RSVP and dishes: ' + location.origin + location.pathname,
       'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
     var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
-    a.download = 'friendsgiving-' + C.year + '.ics';
+    a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }));
+    a.download = 'friendsgiving-' + year + '.ics';
     a.click();
   });
 
-  refresh();
+  picsReady.then(refresh);
   setInterval(function () { if (!document.hidden) refresh(); }, 45000);
 })();

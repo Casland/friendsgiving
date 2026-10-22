@@ -3,40 +3,81 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Friendsgiving 2026</title>
-  <meta name="description" content="RSVP and tell us what you're bringing.">
-  <meta name="theme-color" content="#9e1f3a">
-  <meta property="og:title" content="Friendsgiving 2026">
-  <meta property="og:description" content="RSVP and tell us what you're bringing.">
-  <meta property="og:image" content="assets/turkey.webp">
-  <link rel="icon" href="assets/pie.webp">
+  <title>Friendsgiving at our place</title>
+  <meta name="description" content="RSVP and tell us what you’re bringing.">
+  <meta name="theme-color" content="#f5eee2">
+  <meta property="og:title" content="Friendsgiving at our place">
+  <meta property="og:description" content="RSVP and tell us what you’re bringing.">
+  <meta property="og:image" content="turkey/turkey-still.webp">
+  <link rel="icon" href="assets/dishes/pumpkin-pie.webp">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Shrikhand&family=Young+Serif&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3">
-  <script src="config.js?v=3"></script>
+  <!-- One family: Merriweather, optical size pinned at 18 (that is what matches Lauren's card; higher opsz goes sharp). -->
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:opsz,wdth,wght@18,92..100,400..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="turkey/turkey.css?v=4">
+  <link rel="stylesheet" href="style.css?v=4">
+  <script src="config.js?v=4"></script>
 </head>
 <body>
   <p class="preview-note" id="previewNote" hidden>Preview mode: entries are saved in this browser only, not the sheet.</p>
 
   <header class="hero">
-    <img class="hero-turkey" src="assets/turkey.webp" alt="A cartoon turkey in a scarf holding a pie" width="480" height="520">
-    <h1 class="wordmark"><span id="title">Friendsgiving</span> <span class="year" id="year">2026</span></h1>
-    <p class="when"><span id="dateLabel"></span><br><span id="timeLabel"></span></p>
-    <p class="where" id="where"></p>
+    <h1 class="lockup">
+      <span class="sr-only">Friendsgiving at our place</span>
+      <svg viewBox="0 0 1040 280" aria-hidden="true" focusable="false">
+        <defs>
+          <!-- gentle upward arcs, radii scaled from Lauren's card (title about 54 em, second line about 47 em) -->
+          <path id="arcTitle" d="M0,157 A8000,8000 0 0 1 1040,157"/>
+          <path id="arcSub" d="M0,282 A3800,3800 0 0 1 1040,282"/>
+        </defs>
+        <image href="assets/art/sprig.webp" x="160" y="150" width="108" height="116"/>
+        <image href="assets/art/sprig.webp" x="-880" y="150" width="108" height="116" transform="scale(-1 1)"/>
+        <text class="lockup-title"><textPath href="#arcTitle" startOffset="50%" text-anchor="middle">Friendsgiving</textPath></text>
+        <text class="lockup-sub"><textPath href="#arcSub" startOffset="50%" text-anchor="middle">at our place</textPath></text>
+      </svg>
+    </h1>
+
+    <button type="button" class="turkey-btn" id="turkeyBtn" aria-label="A cartoon turkey. Tap it to make it hop.">
+      <span class="turkey" aria-hidden="true">
+        <span class="tk-shadow"></span>
+        <span class="tk-hop"><span class="tk-squash">
+          <span class="tk-tail">
+            <img class="tk-tail-l" src="turkey/tail-left.webp" alt="">
+            <img class="tk-tail-r" src="turkey/tail-right.webp" alt="">
+            <img class="tk-tail-top" src="turkey/tail-top.webp" alt="">
+          </span>
+          <img class="tk-feet" src="turkey/feet.webp" alt="">
+          <img class="tk-body" src="turkey/body.webp" alt="">
+          <img class="tk-wing-l" src="turkey/wing-l.webp" alt="">
+          <img class="tk-wing-r" src="turkey/wing-r.webp" alt="">
+          <span class="tk-face">
+            <img class="tk-head" src="turkey/head.webp" alt="">
+            <img class="tk-eyes-happy" src="turkey/eyes-happy.webp" alt="">
+            <img class="tk-eyes-open" src="turkey/eyes-open.webp" alt="">
+          </span>
+        </span></span>
+      </span>
+    </button>
+
+    <p class="info">
+      <span id="dateLabel"></span>
+      <span id="timeLabel"></span>
+      <span id="where"></span>
+    </p>
     <p class="blurb" id="blurb"></p>
-    <nav class="hero-actions">
-      <a class="btn" href="#rsvp">RSVP</a>
-      <a class="btn btn-quiet" href="#table">Bring a dish</a>
-    </nav>
   </header>
 
   <main>
-    <section class="paper" id="rsvp" aria-labelledby="rsvpHeading">
+    <section class="card rsvp" id="rsvp" aria-labelledby="rsvpHeading">
       <h2 id="rsvpHeading">Can you make it?</h2>
 
       <div class="rsvp-done" id="rsvpDone" hidden>
         <p class="rsvp-done-line" id="rsvpDoneLine"></p>
+        <p class="rsvp-party" id="rsvpParty"></p>
+        <div class="nudge" id="rsvpNudge" hidden>
+          <p id="nudgeText"></p>
+          <a class="btn" id="nudgeLink" href="#table">Pick a plate</a>
+        </div>
         <button type="button" class="link-btn" id="rsvpEdit">Change your RSVP</button>
       </div>
 
@@ -53,19 +94,24 @@
           <label><input type="radio" name="status" value="no"><span>Can’t make it</span></label>
         </fieldset>
 
-        <div class="field count-field" id="countField">
-          <span id="countLabel">How many of you, counting yourself?</span>
-          <div class="stepper">
-            <button type="button" data-step="-1" aria-label="One fewer">−</button>
-            <output name="countOut" id="countOut" aria-labelledby="countLabel">1</output>
-            <button type="button" data-step="1" aria-label="One more">+</button>
+        <div class="party" id="partyField">
+          <div class="field">
+            <span id="adultsLabel">How many adults?</span>
+            <div class="stepper">
+              <button type="button" data-who="adults" data-step="-1" aria-label="One fewer adult">−</button>
+              <output id="adultsOut" aria-labelledby="adultsLabel" aria-live="polite">1</output>
+              <button type="button" data-who="adults" data-step="1" aria-label="One more adult">+</button>
+            </div>
+          </div>
+          <div class="field">
+            <span id="kidsLabel">How many kids?</span>
+            <div class="stepper">
+              <button type="button" data-who="kids" data-step="-1" aria-label="One fewer kid">−</button>
+              <output id="kidsOut" aria-labelledby="kidsLabel" aria-live="polite">0</output>
+              <button type="button" data-who="kids" data-step="1" aria-label="One more kid">+</button>
+            </div>
           </div>
         </div>
-
-        <label class="field">
-          <span>Allergies, plus-ones, anything we should know <em>(optional)</em></span>
-          <textarea name="note" rows="2" maxlength="300"></textarea>
-        </label>
 
         <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         <p class="form-msg" role="status" id="rsvpMsg"></p>
@@ -76,40 +122,30 @@
     <section class="table" id="table" aria-labelledby="tableHeading">
       <div class="table-inner">
         <h2 id="tableHeading">What’s on the table</h2>
-        <p class="table-sum" id="tableSum">Loading the table…</p>
+        <p class="table-sum" id="tableSum">Setting the table…</p>
+        <p class="table-msg" id="tableMsg" role="status"></p>
         <div id="courses"></div>
 
-        <form class="paper bring" id="dishForm" novalidate>
-          <h3>Bring something</h3>
+        <form class="card bring" id="dishForm" novalidate hidden aria-labelledby="bringHeading">
+          <h3 id="bringHeading">I’ll bring something</h3>
           <label class="field">
             <span>Your name</span>
             <input name="name" autocomplete="name" maxlength="60" required>
           </label>
           <label class="field">
             <span>What are you bringing?</span>
-            <input name="dish" maxlength="80" placeholder="Mom’s mac and cheese" required>
+            <input name="dish" maxlength="80" autocomplete="off" required>
           </label>
-          <div class="field-row">
-            <label class="field">
-              <span>Kind of dish</span>
-              <select name="course" id="courseSelect"></select>
-            </label>
-            <label class="field">
-              <span>Feeds about <em>(optional)</em></span>
-              <input name="serves" inputmode="numeric" maxlength="20" placeholder="8">
-            </label>
-          </div>
-          <fieldset class="tags">
-            <legend>It’s… <em>(optional)</em></legend>
-            <label><input type="checkbox" name="tags" value="vegetarian"><span>vegetarian</span></label>
-            <label><input type="checkbox" name="tags" value="vegan"><span>vegan</span></label>
-            <label><input type="checkbox" name="tags" value="gluten-free"><span>gluten-free</span></label>
-            <label><input type="checkbox" name="tags" value="dairy-free"><span>dairy-free</span></label>
-            <label><input type="checkbox" name="tags" value="has nuts"><span>has nuts</span></label>
-          </fieldset>
+          <label class="field">
+            <span>Kind of dish</span>
+            <select name="course" id="courseSelect"></select>
+          </label>
           <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
           <p class="form-msg" role="status" id="dishMsg"></p>
-          <button class="btn" type="submit">Put it on the table</button>
+          <div class="form-actions">
+            <button class="btn" type="submit">Put it on the table</button>
+            <button type="button" class="link-btn" id="bringCancel">Cancel</button>
+          </div>
         </form>
       </div>
     </section>
@@ -122,11 +158,11 @@
   </main>
 
   <footer class="foot">
-    <img src="assets/pumpkins.webp" alt="" width="520" height="384">
+    <img src="assets/art/pumpkin.webp" alt="" width="600" height="300">
     <p><button type="button" class="link-btn" id="calBtn">Add it to your calendar</button></p>
     <p class="hosts" id="hosts"></p>
   </footer>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

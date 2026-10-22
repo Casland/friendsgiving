@@ -1,0 +1,153 @@
+/* Turkey mascot rig. Drop-in: copy this file + the .webp parts, use the markup from demo.html.
+   Every part is a full 600x600 canvas, so parts stack with no offsets; pivots below are % of that canvas.
+   One loop = --tk-loop (3.6 s): blink, crouch, hop with wing flaps while the tail folds,
+   land with a squash and the tail fan popping open, then a happy head tilt and a wing wave. */
+
+.turkey {
+  --tk-loop: 3.6s;
+  position: relative;
+  width: var(--tk-size, 300px);
+  aspect-ratio: 1;
+}
+.turkey img, .turkey .tk-tail, .turkey .tk-hop, .turkey .tk-squash, .turkey .tk-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.turkey img { display: block; user-select: none; pointer-events: none; }
+
+/* ground shadow (CSS, not part of the art) */
+.turkey .tk-shadow {
+  position: absolute;
+  left: 30%; right: 30%; top: 93.5%; height: 6%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(92, 54, 30, .22), rgba(92, 54, 30, 0));
+}
+
+/* pivots */
+.turkey .tk-squash   { transform-origin: 50% 97%; }
+.turkey .tk-tail     { transform-origin: 50% 66.8%; }
+.turkey .tk-tail-l,
+.turkey .tk-tail-r   { transform-origin: 50% 66.8%; }
+.turkey .tk-wing-l   { transform-origin: 31% 65.5%; }
+.turkey .tk-wing-r   { transform-origin: 69.1% 65.5%; }
+.turkey .tk-head,
+.turkey .tk-face     { transform-origin: 50.2% 63.2%; }
+.turkey .tk-eyes-open { transform-origin: 50.2% 46.6%; }
+
+/* resting look = Lauren's style: happy closed eyes */
+.turkey .tk-eyes-open { opacity: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .turkey .tk-hop      { animation: tk-hop      var(--tk-loop) infinite; }
+  .turkey .tk-shadow   { animation: tk-shadow   var(--tk-loop) infinite; }
+  .turkey .tk-squash   { animation: tk-squash   var(--tk-loop) infinite; }
+  .turkey .tk-tail     { animation: tk-tail     var(--tk-loop) infinite; }
+  .turkey .tk-tail-l   { animation: tk-tail-l   var(--tk-loop) infinite; }
+  .turkey .tk-tail-r   { animation: tk-tail-r   var(--tk-loop) infinite; }
+  .turkey .tk-wing-l   { animation: tk-wing-l   var(--tk-loop) infinite; }
+  .turkey .tk-wing-r   { animation: tk-wing-r   var(--tk-loop) infinite; }
+  .turkey .tk-face     { animation: tk-head     var(--tk-loop) infinite; }
+  .turkey .tk-eyes-open  { animation: tk-eyes-open var(--tk-loop) infinite; }
+  .turkey .tk-eyes-happy { animation: tk-eyes-happy var(--tk-loop) infinite; }
+}
+
+/* 1% = 36 ms at 3.6 s */
+@keyframes tk-hop {
+  0%, 26%  { transform: translateY(0); animation-timing-function: cubic-bezier(.2, .7, .3, 1); }
+  35%      { transform: translateY(-17%); animation-timing-function: cubic-bezier(.6, 0, .9, .5); }
+  44%, 100% { transform: translateY(0); }
+}
+@keyframes tk-shadow {
+  0%, 26%  { transform: scale(1); opacity: 1; }
+  35%      { transform: scale(.62); opacity: .45; }
+  44%      { transform: scale(1.12); opacity: 1; }
+  52%, 100% { transform: scale(1); }
+}
+@keyframes tk-squash {
+  0%, 17%  { transform: scale(1, 1); }
+  24%      { transform: scale(1.1, .87); }              /* crouch */
+  28%      { transform: scale(.9, 1.12); }              /* spring up */
+  35%      { transform: scale(1, 1); }
+  42%      { transform: scale(.94, 1.07); }             /* falling */
+  45%      { transform: scale(1.15, .84); }             /* land */
+  50%      { transform: scale(.96, 1.05); }
+  55%      { transform: scale(1.02, .98); }
+  60%      { transform: scale(1, 1); }
+  78%      { transform: scale(1.015, .985); }
+  92%, 100% { transform: scale(1, 1); }
+}
+/* tail: the side groups fold in behind the top feather, then pop open on landing (only ever inward, so no gaps) */
+@keyframes tk-tail-l {
+  0%, 21%  { transform: rotate(0); }
+  29%, 41% { transform: rotate(24deg); }
+  46%      { transform: rotate(0); }
+  49%      { transform: rotate(6deg); }
+  53%, 100% { transform: rotate(0); }
+}
+@keyframes tk-tail-r {
+  0%, 21%  { transform: rotate(0); }
+  29%, 41% { transform: rotate(-24deg); }
+  46%      { transform: rotate(0); }
+  49%      { transform: rotate(-6deg); }
+  53%, 100% { transform: rotate(0); }
+}
+@keyframes tk-tail {
+  0%, 21%  { transform: scale(1); }
+  29%, 41% { transform: scale(.88); }
+  47%      { transform: scale(1.1); }
+  52%      { transform: scale(.97); }
+  57%      { transform: scale(1.02); }
+  62%, 100% { transform: scale(1); }
+}
+@keyframes tk-head {
+  0%, 18%  { transform: translateY(0) rotate(0); }
+  24%      { transform: translateY(2.2%) rotate(0); }
+  30%      { transform: translateY(-1.5%) rotate(0); }
+  38%      { transform: translateY(-.5%) rotate(0); }
+  46%      { transform: translateY(2.8%) rotate(0); }
+  51%      { transform: translateY(-1%) rotate(0); }
+  56%      { transform: translateY(0) rotate(0); }
+  62%, 82% { transform: translateY(0) rotate(-8deg); }  /* tilt toward the waving wing's other side */
+  90%, 100% { transform: translateY(0) rotate(0); }
+}
+@keyframes tk-wing-l {   /* + = tip up */
+  0%, 25%  { transform: rotate(0); }
+  29%      { transform: rotate(42deg); }
+  33%      { transform: rotate(8deg); }
+  37%      { transform: rotate(42deg); }
+  43%      { transform: rotate(0); }
+  47%      { transform: rotate(-8deg); }
+  52%, 100% { transform: rotate(0); }
+}
+@keyframes tk-wing-r {   /* - = tip up; the wave */
+  0%, 25%  { transform: rotate(0); }
+  29%      { transform: rotate(-42deg); }
+  33%      { transform: rotate(-8deg); }
+  37%      { transform: rotate(-42deg); }
+  43%      { transform: rotate(0); }
+  47%      { transform: rotate(8deg); }
+  52%, 58% { transform: rotate(0); }
+  63%      { transform: rotate(-82deg); }
+  67%      { transform: rotate(-46deg); }
+  71%      { transform: rotate(-82deg); }
+  75%      { transform: rotate(-46deg); }
+  79%      { transform: rotate(-82deg); }
+  86%, 100% { transform: rotate(0); }
+}
+/* eyes: open (dots) while idle with one blink, happy arcs from the crouch through the wave */
+@keyframes tk-eyes-open {
+  0%       { opacity: 1; transform: scaleY(1); }
+  7%       { opacity: 1; transform: scaleY(1); }
+  8.5%     { opacity: 1; transform: scaleY(.08); }
+  10%      { opacity: 1; transform: scaleY(1); }
+  22.9%    { opacity: 1; transform: scaleY(1); }
+  23%, 87.9% { opacity: 0; transform: scaleY(1); }
+  88%, 100% { opacity: 1; transform: scaleY(1); }
+}
+@keyframes tk-eyes-happy {
+  0%, 22.9%  { opacity: 0; }
+  23%, 87.9% { opacity: 1; }
+  88%, 100%  { opacity: 0; }
+}
