@@ -154,8 +154,8 @@
     });
 
     var n = state.dishes.length;
-    $('tableSum').textContent = (n ? n + (n === 1 ? ' dish' : ' dishes') + ' from friends so far' : 'No dishes from friends yet. Be the first!') +
-      (openTotal ? '. ' + openTotal + ' open ' + (openTotal === 1 ? 'plate' : 'plates') + ' still.' : '. The table is full!');
+    var have = n ? n + (n === 1 ? ' dish' : ' dishes') + ' from friends so far.' : 'No dishes from friends yet. Be the first!';
+    $('tableSum').textContent = have + (openTotal ? ' ' + openTotal + ' open ' + (openTotal === 1 ? 'plate' : 'plates') + ' still.' : ' The table is full!');
   }
 
   function plate(d, c) {
